@@ -16,6 +16,7 @@ use craft\elements\db\ElementQueryInterface;
 use craft\helpers\UrlHelper;
 
 use enupal\socializer\elements\actions\Delete;
+use enupal\socializer\events\BeforeProviderConfigEvent;
 use enupal\socializer\records\Provider as ProviderRecord;
 use craft\validators\UniqueValidator;
 use enupal\socializer\elements\db\ProvidersQuery;
@@ -31,6 +32,22 @@ use yii\base\Model;
  */
 class Provider extends Element
 {
+
+    /**
+     * @event BeforeProviderConfig The event that is triggered before a providers config is returned
+     *
+     * ```php
+     * use enupal\socializer\events\BeforeProviderConfigEvent;
+     * use enupal\socializer\element\Provider;
+     * use yii\base\Event;
+     *
+     * Event::on(Provider::class, Provider::EVENT_BEFORE_PROVIDER_CONFIG, function(BeforeProviderConfigEvent $e) {
+     *      $
+     * });
+     * ```
+     */
+    const EVENT_BEFORE_PROVIDER_CONFIG = 'beforeProviderConfig';
+
     /**
      * @inheritdoc
      */
@@ -349,7 +366,6 @@ class Provider extends Element
      */
     private function getProviderConfig()
     {
-        // @todo add event to give a chance to update default config
         $config = [
             'callback' => Socializer::$app->settings->getCallbackUrl(),
             'keys' => [
@@ -367,6 +383,15 @@ class Provider extends Element
                 $config['callback'] = Socializer::$app->settings->getCallbackUrl();
             }
         }
+
+        $event = new BeforeProviderConfigEvent([
+            'provider' => $this,
+            'config' => $config,
+        ]);
+
+        $this->trigger(self::EVENT_BEFORE_PROVIDER_CONFIG, $event);
+
+        $config = $event->config;
 
         return $config;
     }
